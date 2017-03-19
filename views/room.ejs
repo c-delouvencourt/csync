@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CSync :: Regarde tes vidéos avec tes amis.</title>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="../css/materialize.min.css">
+    <link rel="icon" type="image/png" href="https://i.imgur.com/J9hQJh9.png"/>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
+    <script src="js/socket.io.js"></script>
+    <script>
+        var roomCode = window.location.href.slice(-5)
+        var socket = io("", {query: "roomCode=" + roomCode});
+    </script>
+    <style>
+        html {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        nav {
+            color: #fff;
+            background-color: #287bff;
+            width: 100%;
+            height: 56px;
+            line-height: 56px;
+        }
+
+        nav .input-field label i {
+            color: #fff;
+            transition: color .3s;
+            margin: -2px 0px;
+        }
+    </style>
+</head>
+<body style="background: #e7e7e7; overflow: hidden; overflow-x: hidden; overflow-y: hidden">
+<nav>
+    <div class="nav-wrapper white" style="box-shadow: none;">
+        <a href="#!" class="brand-logo center black-text"><img src="https://i.imgur.com/DrL7H8t.png"
+                                                               style="height: 45px; margin-top: 6px"> </a>
+    </div>
+</nav>
+
+<nav>
+    <div class="nav-wrapper">
+        <form id="link-submit">
+            <div class="input-field">
+                <input id="link-input" type="search" required>
+                <label class="label-icon" for="search"><i class="material-icons">search</i></label>
+                <i class="material-icons">close</i>
+            </div>
+        </form>
+    </div>
+</nav>
+<div class="row">
+    <div class="col s2" style="background: #0f0f0f; color: #fff; height: 89vh;">
+        <div id="users-list-header" style="margin-top: 10px; padding: 15px; text-align: center">
+            Amis (0)
+        </div>
+        <hr>
+        <div id="users-column" style="color: #fff; margin-top: 20px">
+            <div id="user-list"></div>
+        </div>
+    </div>
+    <div class="col s10" style="padding: 0">
+        <div id="iframe-wrapper">
+            <div id="player"></div>
+        </div>
+
+        <script id="youtube-embed">
+            var tag = document.createElement('script');
+            var lastUpdate = Math.floor(Date.now());
+
+            tag.src = "https://www.youtube.com/iframe_api";
+            var firstScriptTag = document.getElementById('youtube-embed');
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+            var player;
+            function onYouTubeIframeAPIReady() {
+                player = new YT.Player('player', {
+                    height: ($(window).height() - 108) + 'px',
+                    width: '100%',
+                    autoplay: true,
+                    videoId: 'TjhhGHuxQ4o',
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+
+            function onPlayerReady(event) {
+                document.body.style.overflow = 'hidden';
+                socket.emit("set-video");
+
+                event.target.playVideo();
+                socket.emit("play-player");
+
+                var previousTime = -1;
+                var interval = 1000;
+
+                var checkTime = function () {
+                    var currentTime = player.getCurrentTime();
+
+                    if (previousTime > -1) {
+                        if (Math.abs(currentTime - previousTime) > 2) {
+                            socket.emit("seek-video", currentTime);
+                        }
+                    }
+                    previousTime = player.getCurrentTime();
+                    socket.emit("update-room-time", currentTime);
+
+                    if ($('#video-title').html() != player.getVideoData().title) {
+                        $('#video-title').text(player.getVideoData().title);
+                    }
+
+                    setTimeout(checkTime, interval);
+                    document.body.style.overflow = 'hidden';
+                }
+
+                checkTime();
+            }
+
+            function onPlayerStateChange(event) {
+                switch (event.data) {
+                    case YT.PlayerState.PAUSED:
+                        if((lastUpdate + 4000) >= Math.floor(Date.now())){
+                            socket.emit("pause-player");
+                            lastUpdate = Math.floor(Date.now());
+                        }
+                        break;
+                    case YT.PlayerState.PLAYING:
+                        if((lastUpdate + 4000) >= Math.floor(Date.now())){
+                            socket.emit("play-player");
+                            lastUpdate = Math.floor(Date.now());
+                        }
+                        break;
+                }
+            }
+
+            function stopVideo() {
+                player.stopVideo();
+            }
+        </script>
+    </div>
+    <div class="col s2" style="display: none; background: #fff; color: #000; height: 700px">
+        <div id="chat-header"
+             style="background: #f7f7f7;padding: 10px;ext-align: center;margin-top: 10px;border-radius: 2px; text-transform: uppercase;font-weight: bold;">
+            Tchat
+        </div>
+        <div id="chat-body">
+            <div id="messages"></div>
+        </div>
+        <div id="chat-submit-container">
+            <form id="chat-submit">
+                <input type="text" placeholder="Message" autocomplete="off" id="chat-input">
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="nameModal" class="modal">
+    <div class="modal-content">
+        <h4>Entrez un surnom</h4>
+        <form id="name-submit" style="margin-top: 10px">
+            <div class="row">
+                <div class="input-field col s12">
+                    <input value="" type="text" id="name-input" class="validate">
+                    <label class="active" for="name">Nom d'utilisateur</label>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('.modal').modal();
+        $('#nameModal').modal('open');
+    });
+
+    var modal = document.getElementById("nameModal");
+
+    var notificationSfx = new Audio('sfx/blop-sfx.mp3');
+
+    var inputtedName;
+    $('#name-submit').submit(function () {
+        $('#nameModal').modal('close');
+        inputtedName = $("#name-input").val();
+        socket.emit("new-user", {user: inputtedName, code: roomCode});
+        return false;
+    });
+
+    $('#chat-submit').submit(function () {
+        var message = $("#chat-input").val();
+        if (message.length > 0) {
+            socket.emit("chat-submit", {msg: message, code: roomCode, user: inputtedName});
+            $('#chat-input').val("");
+        }
+        return false;
+    });
+
+    $('#link-submit').submit(function () {
+        var videoId = $('#link-input').val().slice(-11);
+        socket.emit("change-video", videoId);
+        $('#link-input').val("");
+        return false;
+    })
+
+    socket.on("update-messages", function (data) {
+        if (data.user.substring(0, 1) === "★")
+            $("#messages").append($('<div class="chat-message master">').html("<strong>" + data.user + ": </strong> " + data.msg));
+        else
+            $("#messages").append($('<div class="chat-message">').html("<strong>" + data.user + ": </strong> " + data.msg));
+        notificationSfx.play();
+        $("#chat-body").scrollTop($("#chat-body")[0].scrollHeight);
+    });
+
+    socket.on("update-users", function (people) {
+        $("#user-list").html('');
+        for (var i = 0; i < people.length; i++) {
+            $("#user-list").append($('<div class="online-users">').text(people[i].name));
+        }
+        // User count update
+        if (people.length == 1) {
+            $('#users-list-header').text("Amis (" + people.length + ")");
+        }
+        else {
+            $('#users-list-header').text("Amis (" + people.length + ")");
+        }
+    });
+
+    socket.on("connection-message", function (name) {
+        $("#messages").append($('<div class="chat-message leaver">').html("<strong>" + name + " a rejoint.</strong>"));
+    })
+
+    socket.on("disconnection-message", function (name) {
+        $("#messages").append($('<div class="chat-message leaver">').html("<strong>" + name + " a quitté.</strong>"));
+    });
+
+    socket.on("set-player-state-paused", function () {
+        if (player.getPlayerState() != 2)
+            player.pauseVideo();
+    });
+    socket.on("set-player-state-play", function () {
+        if (player.getPlayerState() != 1)
+            player.playVideo();
+    });
+    socket.on("update-video", function (data) {
+        player.cueVideoById(data.videoId, data.currentTime);
+    });
+    socket.on("update-currentTime", function (time) {
+        player.seekTo(time, true);
+    })
+</script>
+</div>
+</body>
+</html>

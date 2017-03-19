@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CSync :: Regarde tes vidéos avec tes amis.</title>
+    <link rel="stylesheet" href="css/home.css">
+    <link rel="icon" type="image/png" href="https://i.imgur.com/J9hQJh9.png"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="one-half left">
+        <h1>Créer une salle de vidéo</h1>
+        <form method="post">
+            <input type="submit" formaction="/makeRoom" class="cta" value="Cliquez-ici" autocomplete="off" id="create">
+        </form>
+    </div>
+    <div class="one-half right">
+        <h1>Rejoindre une salle existante</h1>
+        <form method="post">
+            <input type="text" name="joinRoomName" class="inp" placeholder="Code de la salle">
+            <input type="submit" class="cta" formaction="/joinRoom" value="Rejoindre" autocomplete="off" id="join">
+        </form>
+    </div>
+</div>
+<script type="text/javascript">
+    $l = $('.left')
+    $r = $('.right')
+
+    $l.mouseenter(function () {
+        $('.container').addClass('left-is-hovered');
+    }).mouseleave(function () {
+        $('.container').removeClass('left-is-hovered');
+    });
+
+    $r.mouseenter(function () {
+        $('.container').addClass('right-is-hovered');
+    }).mouseleave(function () {
+        $('.container').removeClass('right-is-hovered');
+    });
+</script>
+</body>
+</html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
